@@ -111,6 +111,9 @@ Macros</h2></td></tr>
 <tr class="memitem:a36428a144ac60f8e6ac0939a9aff14b7"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="AB__vector_8h.html#a36428a144ac60f8e6ac0939a9aff14b7">AB_vec_init</a>(vec)</td></tr>
 <tr class="memdesc:a36428a144ac60f8e6ac0939a9aff14b7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize an AB_vec.  <a href="#a36428a144ac60f8e6ac0939a9aff14b7">More...</a><br /></td></tr>
 <tr class="separator:a36428a144ac60f8e6ac0939a9aff14b7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a216a48c850d99d12b8ef786c4c4000c2"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="AB__vector_8h.html#a216a48c850d99d12b8ef786c4c4000c2">AB_vec_userdata</a>(vec)&#160;&#160;&#160;((vec)-&gt;userdata)</td></tr>
+<tr class="memdesc:a216a48c850d99d12b8ef786c4c4000c2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Access an AB_vec's userdata.  <a href="#a216a48c850d99d12b8ef786c4c4000c2">More...</a><br /></td></tr>
+<tr class="separator:a216a48c850d99d12b8ef786c4c4000c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a89c4bc2d8a7251f95724a0a9be7309f8"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="AB__vector_8h.html#a89c4bc2d8a7251f95724a0a9be7309f8">AB_vec_destroy</a>(vec)</td></tr>
 <tr class="memdesc:a89c4bc2d8a7251f95724a0a9be7309f8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Free memory associated with an AB_vec.  <a href="#a89c4bc2d8a7251f95724a0a9be7309f8">More...</a><br /></td></tr>
 <tr class="separator:a89c4bc2d8a7251f95724a0a9be7309f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -144,7 +147,16 @@ Macros</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Utility header defining a generic resizable vector. </p>
-<p>Many of the things that are to be used in this header are macros that work due to the storage of type information in the vector themselves. This does unfortunately mean that mismatching vector types could cause runtime errors, as there is no way to detect them at compile time. </p>
+<p>Many of the things that are to be used in this header are macros that work due to the storage of type information in the vector themselves. This does unfortunately mean that mismatching vector types could cause runtime errors, as there is no way to detect them at compile time.</p>
+<p>This library is heavily inspired by kvec.h which is a part of klib. This header improves on the initial ideas by removing the need to specify the types in any of the vector functions, and introducing inline functions to hopefully make the source more readable. More compile options are also available for customizable memory management and compatibility.</p>
+<p>Macro-options:</p><ul>
+<li>AB_VEC_INLINE Define this macro to be the decorator for inline functions. Tries to guess whether <code>inline</code> or <code><b>inline</b></code> are available, but try to define this macro when in ANSI mode.</li>
+<li><a class="el" href="AB__vector_8h.html#a30bc6c74e3fdf5812da81452de57b919" title="Runtime assertion macro for the header. ">AB_VEC_ASSERT(cond)</a> Define this macro to be the runtime check function. Pulls in assert.h for <code>assert</code> as fallback.</li>
+<li><a class="el" href="AB__vector_8h.html#aba926c654c7e135e80983ad0218e34f0" title="Compiletime assertion macro for the header This macro is called within functions which require specif...">AB_VEC_STATIC_ASSERT(cond, msg)</a> Define this macro to be the compile-time check function. Uses a negative array subscript as fallback</li>
+<li>AB_VEC_USERDATA Define this macro to insert an additional member into the vector. This member is passed to the memory allocation functions</li>
+<li><a class="el" href="AB__vector_8h.html#a14045a6a84985e4e78041ec906a6f928" title="Memory allocation function for the header. ">AB_VEC_REALLOC(ptr, old_size, new_size, userdata)</a> Define this macro to customize the memory usage of the vector. Without AB_VEC_USERDATA, the userdata argument is always NULL and can be ignored. Pulls in stdlib.h for <code>realloc</code> as fallback, so make sure you define both AB_VEC_REALLOC and AB_VEC_FREE if you change one.</li>
+<li><a class="el" href="AB__vector_8h.html#a281b2fd7622541cf9ccf946dd6740476" title="Memory de-allocation function for the header. ">AB_VEC_FREE(ptr, size, userdata)</a> Define this macro to customize memory usage of the vector. Same rules apply as for AB_VEC_REALLOC. Pulls in stdlib.h for <code>free</code> as fallback. </li>
+</ul>
 </div><h2 class="groupheader">Macro Definition Documentation</h2>
 <a id="ab94e5f8caca37f4c3549dda93a79b833"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ab94e5f8caca37f4c3549dda93a79b833">&#9670;&nbsp;</a></span>AB_vec</h2>
@@ -349,7 +361,7 @@ Macros</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">do</span> { \</div><div class="line">    (vec)-&gt;num = (vec)-&gt;capacity = 0; (vec)-&gt;elems = NULL; \</div><div class="line">} <span class="keywordflow">while</span> (0)</div></div><!-- fragment -->
+<b>Value:</b><div class="fragment"><div class="line"><span class="keywordflow">do</span> {                                                                     \</div><div class="line">    (vec)-&gt;num = (vec)-&gt;capacity = 0; (vec)-&gt;elems = NULL;                                         \</div><div class="line">} <span class="keywordflow">while</span> (0)</div></div><!-- fragment -->
 <p>Initialize an AB_vec. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -679,6 +691,34 @@ Macros</h2></td></tr>
 
 <p>Compiletime assertion macro for the header This macro is called within functions which require specific behavior. </p>
 <dl class="section note"><dt>Note</dt><dd>This macro can be overidden </dd></dl>
+
+</div>
+</div>
+<a id="a216a48c850d99d12b8ef786c4c4000c2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a216a48c850d99d12b8ef786c4c4000c2">&#9670;&nbsp;</a></span>AB_vec_userdata</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define AB_vec_userdata</td>
+          <td>(</td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname">vec</td><td>)</td>
+          <td>&#160;&#160;&#160;((vec)-&gt;userdata)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Access an AB_vec's userdata. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">vec</td><td>Pointer to an AB_vec </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The <code>userdata</code> field (as lvalue) </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>Only available when <code>AB_VEC_INCLUDE_USERDATA</code> is set </dd></dl>
 
 </div>
 </div>

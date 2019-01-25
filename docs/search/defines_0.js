@@ -16,5 +16,6 @@ var searchData=
   ['ab_5fvec_5frealloc',['AB_VEC_REALLOC',['../AB__vector_8h.html#a14045a6a84985e4e78041ec906a6f928',1,'AB_vector.h']]],
   ['ab_5fvec_5fresize',['AB_vec_resize',['../AB__vector_8h.html#a2bc8598959bf709406e23a78c01673aa',1,'AB_vector.h']]],
   ['ab_5fvec_5fsize',['AB_vec_size',['../AB__vector_8h.html#ac58d49b2da9a94bf7e29925d54b82e0c',1,'AB_vector.h']]],
-  ['ab_5fvec_5fstatic_5fassert',['AB_VEC_STATIC_ASSERT',['../AB__vector_8h.html#aba926c654c7e135e80983ad0218e34f0',1,'AB_vector.h']]]
+  ['ab_5fvec_5fstatic_5fassert',['AB_VEC_STATIC_ASSERT',['../AB__vector_8h.html#aba926c654c7e135e80983ad0218e34f0',1,'AB_vector.h']]],
+  ['ab_5fvec_5fuserdata',['AB_vec_userdata',['../AB__vector_8h.html#a216a48c850d99d12b8ef786c4c4000c2',1,'AB_vector.h']]]
 ];

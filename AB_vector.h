@@ -5,11 +5,46 @@
  * work due to the storage of type information in the vector themselves.
  * This does unfortunately mean that mismatching vector types could cause
  * runtime errors, as there is no way to detect them at compile time.
+ *
+ * This library is heavily inspired by kvec.h which is a part of klib.
+ * This header improves on the initial ideas by removing the need to specify
+ * the types in any of the vector functions, and introducing inline
+ * functions to hopefully make the source more readable. More compile options
+ * are also available for customizable memory management and compatibility.
+ *
+ * Macro-options:
+ *  - AB_VEC_INLINE
+ *    Define this macro to be the decorator for inline functions. Tries to
+ *    guess whether @c inline or @c __inline__ are available, but try to define
+ *    this macro when in ANSI mode.
+ *
+ *  - AB_VEC_ASSERT(cond)
+ *    Define this macro to be the runtime check function. Pulls in
+ *    assert.h for @c assert as fallback.
+ *
+ *  - AB_VEC_STATIC_ASSERT(cond, msg)
+ *    Define this macro to be the compile-time check function. Uses a
+ *    negative array subscript as fallback
+ *
+ *  - AB_VEC_USERDATA
+ *    Define this macro to insert an additional member into the vector.
+ *    This member is passed to the memory allocation functions
+ *
+ *  - AB_VEC_REALLOC(ptr, old_size, new_size, userdata)
+ *    Define this macro to customize the memory usage of the vector. Without
+ *    AB_VEC_USERDATA, the userdata argument is always NULL and can be ignored.
+ *    Pulls in stdlib.h for @c realloc as fallback, so make sure you define
+ *    both AB_VEC_REALLOC and AB_VEC_FREE if you change one.
+ *
+ *  - AB_VEC_FREE(ptr, size, userdata)
+ *    Define this macro to customize memory usage of the vector. Same rules
+ *    apply as for AB_VEC_REALLOC. Pulls in stdlib.h for @c free as fallback.
+ *
  */
 #ifndef AMBER_UTIL_VECTOR_H
 #define AMBER_UTIL_VECTOR_H
 
-#include <stddef.h> /* size_t */
+#include <stddef.h> /* size_t, NULL */
 #include <string.h> /* memcpy */
 
 #ifndef AB_VEC_ASSERT
@@ -32,9 +67,9 @@
  * @note This macro can be overidden
  * @hideinitializer
  */
-# define AB_VEC_STATIC_ASSERT(cond, msg) do { \
-    char AB_VEC_STATIC_ASSERT_STRCAT(msg, _on_line_, __LINE__)[1 - !(cond) * 2]; \
-    (void)(AB_VEC_STATIC_ASSERT_STRCAT(msg, _on_line_, __LINE__)); \
+# define AB_VEC_STATIC_ASSERT(cond, msg) do {                                                      \
+    char AB_VEC_STATIC_ASSERT_STRCAT(msg, _on_line_, __LINE__)[1 - !(cond) * 2];                   \
+    (void)(AB_VEC_STATIC_ASSERT_STRCAT(msg, _on_line_, __LINE__));                                 \
 } while (0)
 #endif /* AB_VEC_STATIC_ASSERT */
 
@@ -42,7 +77,7 @@
  * @note This macro can be overidden
  */
 #ifndef AB_VEC_INLINE
-# if __STDC_VERSION__ >= 199901L || __DOXYGEN__
+# if __STDC_VERSION__ >= 199901L || defined(__DOXYGEN__)
 #  define AB_VEC_INLINE inline
 # elif __GNUC__
 #  define AB_VEC_INLINE __inline__
@@ -80,10 +115,10 @@ struct AB_vector_generic {
  * @param type The element type
  */
 #ifdef AB_VEC_INCLUDE_USERDATA
-# define AB_vec(type)                                                                \
+# define AB_vec(type)                                                                              \
     struct { size_t num, capacity; type *elems; void *userdata; }
 #else
-# define AB_vec(type)                                                                \
+# define AB_vec(type)                                                                              \
     struct { size_t num, capacity; type *elems; }
 #endif
 
@@ -97,11 +132,17 @@ struct AB_vector_generic {
 /** @brief Initialize an AB_vec
  * @param vec Pointer to an AB_vec structure
  */
-#define AB_vec_init(vec) do { \
-    (vec)->num = (vec)->capacity = 0; (vec)->elems = NULL; \
-} while (0)
-
 #ifdef AB_VEC_INCLUDE_USERDATA
+# define AB_vec_init(vec) do {                                                                     \
+    (vec)->num = (vec)->capacity = 0; (vec)->elems = NULL; (vec)->userdata = NULL;                 \
+} while (0)
+#else
+# define AB_vec_init(vec) do {                                                                     \
+    (vec)->num = (vec)->capacity = 0; (vec)->elems = NULL;                                         \
+} while (0)
+#endif
+
+#if defined(AB_VEC_INCLUDE_USERDATA) || defined(__DOXYGEN__)
 /** @brief Access an AB_vec's userdata
  * @param vec Pointer to an AB_vec
  * @return The @c userdata field (as lvalue)
@@ -115,10 +156,10 @@ struct AB_vector_generic {
  * @hideinitializer
  */
 #ifdef AB_VEC_INCLUDE_USERDATA
-# define AB_vec_destroy(vec) \
+# define AB_vec_destroy(vec)                                                                       \
     AB_VEC_FREE((vec)->elems, (vec)->capacity * sizeof(*(vec)->elems), (vec)->userdata)
 #else
-# define AB_vec_destroy(vec) \
+# define AB_vec_destroy(vec)                                                                       \
     AB_VEC_FREE((vec)->elems, (vec)->capacity * sizeof(*(vec)->elems), NULL)
 #endif
 
@@ -128,7 +169,7 @@ struct AB_vector_generic {
  * @return The element at that index (as an lvalue, ie. can take address)
  * @note @c idx must be a valid index
  */
-#define AB_vec_at(vec, idx)                                                         \
+#define AB_vec_at(vec, idx)                                                                        \
     ((vec)->elems[idx])
 
 /** @brief Remove the last element of the vector, returning the value
@@ -137,21 +178,21 @@ struct AB_vector_generic {
  * @note The vector must be non-empty
  * @hideinitializer
  */
-#define AB_vec_pop(vec)                                                             \
+#define AB_vec_pop(vec)                                                                            \
     (AB_VEC_ASSERT((vec)->num > 0), (vec)->elems[--(vec)->num])
 
 /** @brief Query the number of elements in the vector
  * @param vec Pointer to the AB_vec
  * @return The number of elements
  */
-#define AB_vec_size(vec)                                                            \
+#define AB_vec_size(vec)                                                                           \
     ((const size_t)(vec)->num)
 
 /** @brief Query the current capacity of the vector
  * @param vec Pointer to the AB_vec
  * @return The current number of possible elements storable before @c realloc
  */
-#define AB_vec_max(vec)                                                             \
+#define AB_vec_max(vec)                                                                            \
     ((const size_t)(vec)->capacity)
 
 static AB_VEC_INLINE int
@@ -178,7 +219,7 @@ AB_vec_resize_generic(struct AB_vector_generic *vec, size_t new_size, size_t ele
  * @return 0 on success, nonzero on error
  * @hideinitializer
  */
-#define AB_vec_resize(vec, newsize) \
+#define AB_vec_resize(vec, newsize)                                                                \
     AB_vec_resize_generic((struct AB_vector_generic *)(vec), newsize, sizeof(*(vec)->elems))
 
 static AB_VEC_INLINE int
@@ -201,8 +242,8 @@ AB_vec_copy_generic(struct AB_vector_generic *dest,
  * @note The vectors must have elements with the same size - it's not checked
  * @hideinitializer
  */
-#define AB_vec_copy(dest, src) \
-    AB_vec_copy_generic((struct AB_vector_generic *)(dest), \
+#define AB_vec_copy(dest, src)                                                                     \
+    AB_vec_copy_generic((struct AB_vector_generic *)(dest),                                        \
             (struct AB_vector_generic *)(src), sizeof(*(dest)->elems))
 
 /** @brief Add an element to the end of the vector
@@ -211,11 +252,11 @@ AB_vec_copy_generic(struct AB_vector_generic *dest,
  * @return 0 on success, nonzero on error
  * @hideinitializer
  */
-#define AB_vec_push(vec, elem)                                                    \
-    ((vec)->num == (vec)->capacity ?                                              \
-         (AB_vec_resize((vec), (vec)->capacity ? (vec)->capacity << 1 : 2) == 0 ? \
-              ((vec)->elems[(vec)->num++] = (elem), 0)                            \
-              : 1)                                                                \
+#define AB_vec_push(vec, elem)                                                                     \
+    ((vec)->num == (vec)->capacity ?                                                               \
+         (AB_vec_resize((vec), (vec)->capacity ? (vec)->capacity << 1 : 2) == 0 ?                  \
+              ((vec)->elems[(vec)->num++] = (elem), 0)                                             \
+              : 1)                                                                                 \
          : ((vec)->elems[(vec)->num++] = (elem), 0))
 
 /** @brief Add an element to the end of the vector, returning a pointer to that spot
@@ -223,11 +264,11 @@ AB_vec_copy_generic(struct AB_vector_generic *dest,
  * @return Pointer to the pushed element, or NULL on error
  * @hideinitializer
  */
-#define AB_vec_pushp(vec)                                                         \
-    ((vec)->num == (vec)->capacity ?                                              \
-         (AB_vec_resize((vec), (vec)->capacity ? (vec)->capacity << 1 : 2) == 0 ? \
-              &(vec)->elems[(vec)->num++]                                         \
-              : NULL)                                                             \
+#define AB_vec_pushp(vec)                                                                          \
+    ((vec)->num == (vec)->capacity ?                                                               \
+         (AB_vec_resize((vec), (vec)->capacity ? (vec)->capacity << 1 : 2) == 0 ?                  \
+              &(vec)->elems[(vec)->num++]                                                          \
+              : NULL)                                                                              \
          : &(vec)->elems[(vec)->num++])
 
 /* Round x up to the nearest power of 2 */
@@ -244,7 +285,8 @@ static AB_VEC_INLINE size_t AB_vec_roundup32(size_t x)
     return x;
 }
 
-static AB_VEC_INLINE int AB_vec_insert_generic(struct AB_vector_generic *vec, size_t idx, size_t elem_size)
+static AB_VEC_INLINE int AB_vec_insert_generic(struct AB_vector_generic *vec,
+        size_t idx, size_t elem_size)
 {
     if (vec->capacity <= idx) {
         int err = AB_vec_resize_generic(vec, AB_vec_roundup32(idx + 1), elem_size);
@@ -265,9 +307,9 @@ static AB_VEC_INLINE int AB_vec_insert_generic(struct AB_vector_generic *vec, si
  *  (depending on the @c realloc function)
  * @hideinitializer
  */
-#define AB_vec_insert(vec, idx, elem) \
+#define AB_vec_insert(vec, idx, elem)                                                              \
     (AB_vec_insert_generic((struct AB_vector_generic *)(vec), (idx), sizeof(*(vec)->elems)) == 0 ? \
-        (vec)->elems[(idx)] = (elem) \
+        (vec)->elems[(idx)] = (elem)                                                               \
         : 1)
 
 #endif /* AMBER_UTIL_VECTOR_H */
